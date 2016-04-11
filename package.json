@@ -52,5 +52,8 @@
     "test-api": "node test.js",
     "test-coverage": "istanbul cover test.js",
     "test": "npm run build && npm run lint && npm run test-coverage"
+  },
+  "dependencies": {
+    "run-async": "2.2.0"
   }
 }

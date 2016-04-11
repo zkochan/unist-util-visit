@@ -8,6 +8,8 @@
 
 'use strict';
 
+const runAsync = require('run-async')
+
 /* eslint-env commonjs */
 
 /**
@@ -28,6 +30,8 @@ function visit(tree, type, visitor, reverse) {
         type = null;
     }
 
+    visitor = runAsync(visitor)
+
     /**
      * Visit children in `parent`.
      *
@@ -42,17 +46,27 @@ function visit(tree, type, visitor, reverse) {
         var index = (reverse ? max : min) + step;
         var child;
 
-        while (index > min && index < max) {
-            child = children[index];
+        return walkAll()
 
-            if (child && one(child, index, parent) === false) {
-                return false;
-            }
+        function walkAll () {
+          if (!(index > min && index < max)) return Promise.resolve(true)
 
+          child = children[index];
+
+          if (!child) {
             index += step;
-        }
+            return walkAll()
+          }
 
-        return true;
+          return one(child, index, parent)
+            .then(result => {
+              if (result === false) {
+                return Promise.resolve(false)
+              }
+              index += step;
+              return walkAll()
+            })
+        }
     }
 
     /**
@@ -68,18 +82,16 @@ function visit(tree, type, visitor, reverse) {
 
         index = index || (parent ? 0 : null);
 
-        if (!type || node.type === type) {
-            result = visitor(node, index, parent || null);
-        }
-
-        if (node.children && result !== false) {
-            return all(node.children, node);
-        }
-
-        return result;
+        return ((!type || node.type === type) ? visitor(node, index, parent || null) : Promise.resolve(result))
+          .then(result => {
+              if (node.children && result !== false) {
+                  return all(node.children, node);
+              }
+              return Promise.resolve(result)
+          })
     }
 
-    one(tree);
+    return one(tree);
 }
 
 /*
